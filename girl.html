@@ -45,12 +45,24 @@
             </div>
         </div>
     </div>
+<!-- 加载supabase库，单独标签 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- 自己的JS代码，另一个独立标签 -->
 <script>
 const SUPABASE_URL = "https://riztyuyklzmvgielybbm.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_GHF3pywA7ZbeizbZu_M8cg_NbWu8Asq";
-const { createClient } = supabase;
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let data = {score:0,logs:[]};
+
+async function loadBin(){
+  const { data:rowData, error } = await supabase
+  .from("score_data")
+  // ...后续代码
+}
+</script>
+
+
 
 async function loadBin(){
     const { data:rowData, error } = await supabase
