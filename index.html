@@ -72,45 +72,55 @@ const SUPABASE_ANON_KEY = "sb_publishable_GHF3pywA7ZbeizbZu_M8cg_NbWu8Asq";
 const { createClient } = window.supabase;
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-
 let data = {score:0,logs:[]};
 let lastSnapshot = null; // 保存上一次快照，用于撤销
 
 // 读取数据
 async function loadBin(){
-    const { data:rowData, error } = await supabase
-        .from("score_data")
-        .select("*")
-        .eq("id",1)
-        .single();
-    if(error){
-        console.error("读取错误",error);
-        return;
-    }
-    if(rowData){
-        data.score = rowData.score;
-        if(rowData.logs){
-            data.logs = JSON.parse(rowData.logs);
-        }else{
-            data.logs = [];
+    try{
+        const { data:rowData, error } = await supabase
+            .from("score_data")
+            .select("*")
+            .eq("id",1)
+            .single();
+        if(error){
+            console.error("读取错误",error);
+            alert("数据库读取失败："+error.message);
+            return;
         }
+        if(rowData){
+            data.score = rowData.score;
+            if(rowData.logs){
+                data.logs = JSON.parse(rowData.logs);
+            }else{
+                data.logs = [];
+            }
+        }
+        renderPage();
+    }catch(err){
+        console.error("load捕获异常",err);
+        alert("网络异常，加载数据失败！");
     }
-    renderPage();
 }
 
 // 更新云端数据
 async function updateBin(){
-    const updatePayload = {
-        score: data.score,
-        logs: JSON.stringify(data.logs)
-    };
-    const { error } = await supabase
-        .from("score_data")
-        .update(updatePayload)
-        .eq("id",1);
-    if(error){
-        alert("保存失败！" + error.message);
-        console.error(error);
+    try{
+        const updatePayload = {
+            score: data.score,
+            logs: JSON.stringify(data.logs)
+        };
+        const { error } = await supabase
+            .from("score_data")
+            .update(updatePayload)
+            .eq("id",1);
+        if(error){
+            alert("保存失败！" + error.message);
+            console.error(error);
+        }
+    }catch(err){
+        alert("网络错误，保存失败！");
+        console.error(err);
     }
 }
 
@@ -131,7 +141,7 @@ function renderPage(){
 async function addScore(){
     const num = Number(document.getElementById("numInput").value);
     const reason = document.getElementById("reasonInput").value || "加分";
-    if(!num) return alert("请输入数字");
+    if(!num || num <=0) return alert("请输入有效的正数");
     lastSnapshot = JSON.parse(JSON.stringify(data));//保存快照
     data.score += num;
     const time = new Date().toLocaleString();
@@ -145,7 +155,7 @@ async function addScore(){
 async function subScore(){
     const num = Number(document.getElementById("numInput").value);
     const reason = document.getElementById("reasonInput").value || "兑换扣除";
-    if(!num) return alert("请输入数字");
+    if(!num || num <=0) return alert("请输入有效的正数");
     if(data.score < num) return alert("积分不足！");
     lastSnapshot = JSON.parse(JSON.stringify(data));//保存快照
     data.score -= num;
