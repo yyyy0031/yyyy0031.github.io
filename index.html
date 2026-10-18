@@ -69,8 +69,9 @@
 const SUPABASE_URL = "https://riztyuyklzmvgielybbm.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_GHF3pywA7ZbeizbZu_M8cg_NbWu8Asq";
 // =============================================
-const { createClient } = supabase;
+const { createClient } = window.supabase;
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 
 let data = {score:0,logs:[]};
 let lastSnapshot = null; // 保存上一次快照，用于撤销
