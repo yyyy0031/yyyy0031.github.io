@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>情侣积分商城｜管理员后台</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        *{box-sizing:border-box;font-family:system-ui}
+        body{background:#fef0f4;padding:20px;max-width:900px;margin:0 auto}
+        .box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px #00000010}
+        h2{color:#d84b72;margin-top:0}
+        .input-item{margin:10px 0}
+        input{padding:8px;width:220px;border:1px solid #ddd;border-radius:6px;font-size:16px}
+        button{padding:9px 14px;border:none;border-radius:8px;cursor:pointer;font-size:15px;margin:4px}
+        .btn-add{background:#42b983;color:white}
+        .btn-sub{background:#ff7474;color:white}
+        .btn-clear{background:#ff4466;color:white}
+        .btn-undo{background:#5488ff;color:white}
+        .goods-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+        .goods-card{border:1px solid #f8c8d8;border-radius:12px;padding:14px;background:#fff7fa}
+        .goods-name{font-weight:bold;font-size:17px;margin-bottom:4px}
+        .goods-score{color:#d84b72}
+        .log-item{padding:10px;border-bottom:1px solid #f2e4e8;font-size:17px}
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>💖 积分管理后台</h2>
+        <div>当前总积分：<span id="scoreText" style="font-size:24px;font-weight:bold;color:#d84b72">0</span></div>
+        <div class="input-item">
+            <input type="number" id="numInput" placeholder="输入分数">
+            <input type="text" id="reasonInput" placeholder="备注/事由">
+        </div>
+        <button class="btn-add" onclick="addScore()">➕增加积分</button>
+        <button class="btn-sub" onclick="subScore()">➖扣除积分</button>
+        <button class="btn-clear" onclick="clearLogs()">🗑️清空全部日志</button>
+        <button class="btn-undo" onclick="undoLast()">↩️撤销上一次操作</button>
+    </div>
+    <div class="box">
+        <h2>🎁 可兑换商品清单（女友端展示）</h2>
+        <div class="goods-wrap">
+            <div class="goods-card">
+                <div class="goods-name">一杯奶茶</div>
+                <div class="goods-score">消耗：900积分</div>
+            </div>
+            <div class="goods-card">
+                <div class="goods-name">专属小蛋挞</div>
+                <div class="goods-score">消耗：150积分</div>
+            </div>
+            <div class="goods-card">
+                <div class="goods-name">专属卫龙系列</div>
+                <div class="goods-score">消耗：100积分</div>
+            </div>
+            <div class="goods-card">
+                <div class="goods-name">随机盲盒</div>
+                <div class="goods-score">消耗：380积分</div>
+            </div>
+        </div>
+    </div>
+    <div class="box">
+        <h2>📜积分记录</h2>
+        <div id="logList"></div>
+    </div>
+<script>
+// ==========在这里填入你的Supabase信息==========
+const SUPABASE_URL = "https://riztyuyklzmvgielybbm.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_GHF3pywA7ZbeizbZu_M8cg_NbWu8Asq";
+// =============================================
+const { createClient } = window.supabase;
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let data = {score:0,logs:[]};
+let lastSnapshot = null; // 保存上一次快照，用于撤销
+
+// 读取数据
+async function loadBin(){
+    try{
+        const { data:rowData, error } = await supabase
+            .from("score_data")
+            .select("*")
+            .eq("id",1)
+            .single();
+        if(error){
+            console.error("读取错误",error);
+            alert("数据库读取失败："+error.message);
+            return;
+        }
+        if(rowData){
+            data.score = rowData.score;
+            if(rowData.logs){
+                data.logs = JSON.parse(rowData.logs);
+            }else{
+                data.logs = [];
+            }
+        }
+        renderPage();
+    }catch(err){
+        console.error("load捕获异常",err);
+        alert("网络异常，加载数据失败！");
+    }
+}
+
+// 更新云端数据
+async function updateBin(){
+    try{
+        const updatePayload = {
+            score: data.score,
+            logs: JSON.stringify(data.logs)
+        };
+        const { error } = await supabase
+            .from("score_data")
+            .update(updatePayload)
+            .eq("id",1);
+        if(error){
+            alert("保存失败！" + error.message);
+            console.error(error);
+        }
+    }catch(err){
+        alert("网络错误，保存失败！");
+        console.error(err);
+    }
+}
+
+// 页面渲染
+function renderPage(){
+    document.getElementById("scoreText").innerText = data.score;
+    const logDom = document.getElementById("logList");
+    logDom.innerHTML = "";
+    data.logs.forEach(item=>{
+        const div = document.createElement("div");
+        div.className = "log-item";
+        div.innerText = item;
+        logDom.appendChild(div);
+    })
+}
+
+// 加分
+async function addScore(){
+    await loadBin(); // 先拉取最新数据，防止缓存不一致
+    const num = Number(document.getElementById("numInput").value);
+    const reason = document.getElementById("reasonInput").value || "加分";
+    if(!num || num <=0) return alert("请输入有效的正数");
+    lastSnapshot = JSON.parse(JSON.stringify(data));//保存快照
+    data.score += num;
+    const time = new Date().toLocaleString();
+    data.logs.unshift(`【${time}】✅ 加分：+${num}，备注：${reason}`);
+    await updateBin();
+    alert("加分成功！");
+    renderPage();
+}
+
+// 扣分
+async function subScore(){
+    await loadBin(); // 先拉取最新数据，防止缓存不一致
+    const num = Number(document.getElementById("numInput").value);
+    const reason = document.getElementById("reasonInput").value || "兑换扣除";
+    if(!num || num <=0) return alert("请输入有效的正数");
+    if(data.score < num) return alert("积分不足！");
+    lastSnapshot = JSON.parse(JSON.stringify(data));//保存快照
+    data.score -= num;
+    const time = new Date().toLocaleString();
+    data.logs.unshift(`【${time}】💸 扣积分：-${num}，备注：${reason}`);
+    await updateBin();
+    alert("扣除成功！");
+    renderPage();
+}
+
+// 清空日志
+async function clearLogs(){
+    await loadBin(); // 先拉取最新数据，防止缓存不一致
+    if(!confirm("⚠️确定清空全部日志？记录无法恢复！积分不会清零！")) return;
+    lastSnapshot = JSON.parse(JSON.stringify(data));
+    data.logs = [];
+    await updateBin();
+    alert("✅日志清空完成");
+    renderPage();
+}
+
+// 撤销上一次操作
+async function undoLast(){
+    if(!lastSnapshot) return alert("没有可撤销的操作！");
+    if(!confirm("⚠️撤销上一次积分变动？")) return;
+    data = lastSnapshot;
+    lastSnapshot = null;
+    await updateBin();
+    alert("✅撤销成功！已回滚到上一状态");
+    renderPage();
+}
+
+// 页面加载读取数据
+loadBin();
+</script>
+</body>
+</html>
