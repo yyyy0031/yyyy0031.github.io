@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>情侣积分商城</title>
+    <style>
+        *{box-sizing:border-box;font-family:system-ui}
+        body{background:#fef0f4;padding:20px;max-width:900px;margin:0 auto}
+        .box{background:#fff;border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 2px 8px #00000010}
+        h2{color:#d84b72;margin-top:0}
+        .goods-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+        .goods-card{border:1px solid #f8c8d8;border-radius:12px;padding:14px;background:#fff7fa}
+        .goods-card button{width:100%;background:#d84b72;color:white;border:none;border-radius:8px;padding:8px;cursor:pointer;font-size:15px}
+        .log-item{padding:10px;border-bottom:1px solid #f2e4e8;font-size:17px}
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>💖 我的积分</h2>
+        <div>当前积分：<span id="scoreText" style="font-size:24px;font-weight:bold;color:#d84b72">0</span></div>
+    </div>
+
+    <div class="box">
+        <h2>🎁 兑换商城</h2>
+        <div class="goods-wrap">
+            <div class="goods-card">
+                <div class="goods-name">一杯奶茶</div>
+                <div class="goods-score">消耗：900积分</div>
+                <button onclick="applyExchange('一杯奶茶',900)">申请兑换</button>
+            </div>
+            <div class="goods-card">
+                <div class="goods-name">专属小蛋挞</div>
+                <div class="goods-score">消耗：150积分</div>
+                <button onclick="applyExchange('专属小蛋挞',150)">申请兑换</button>
+            </div>
+            <div class="goods-card">
+                <div class="goods-name">专属卫龙系列</div>
+                <div class="goods-score">消耗：100积分</div>
+                <button onclick="applyExchange('专属卫龙系列',100)">申请兑换</button>
+            </div>
+            <div class="goods-card">
+                <div class="goods-name">随机盲盒</div>
+                <div class="goods-score">消耗：380积分</div>
+                <button onclick="applyExchange('随机盲盒',380)">申请兑换</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="box">
+        <h2>📜积分记录</h2>
+        <div id="logList"></div>
+    </div>
+
+<script>
+// 和后台用同一套BIN和密钥！
+const BIN_ID = "6ad45145ffd5d1605374f5b2";
+const MASTER_KEY = "$2a$10$eMOTEO4xMdhjqMDpiI7LS.5TAUB5z7VqkmsOKM9f8EEhM03JqDsjm";
+let data = {score:0,logs:[]};
+
+async function loadBin(){
+    const res = await fetch(`https://jsonbin.io/api/v1/b/${BIN_ID}`,{
+        headers:{"X-Master-Key":MASTER_KEY}
+    })
+    data = await res.json();
+    renderPage();
+}
+async function updateBin(){
+    await fetch(`https://jsonbin.io/api/v1/b/${BIN_ID}`,{
+        method:"PUT",
+        headers:{
+            "X-Master-Key":MASTER_KEY,
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify(data)
+    })
+}
+function renderPage(){
+    document.getElementById("scoreText").innerText = data.score;
+    const logDom = document.getElementById("logList");
+    logDom.innerHTML = "";
+    data.logs.forEach(item=>{
+        const div = document.createElement("div");
+        div.className = "log-item";
+        div.innerText = item;
+        logDom.appendChild(div);
+    })
+}
+async function applyExchange(name,cost){
+    const time = new Date().toLocaleString();
+    data.logs.unshift(`【${time}】📩 申请兑换【${name}】待确认（需${cost}分）`);
+    await updateBin();
+    alert("申请提交成功！等待对方审核🥰");
+    renderPage();
+}
+loadBin();
+</script>
+</body>
+</html>
